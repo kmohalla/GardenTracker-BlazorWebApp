@@ -1,0 +1,105 @@
+﻿@page "/guides/edit/{id:int}"
+@rendermode InteractiveServer 
+@using GardenData
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<GardenContext> ContextFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Edit Guide</PageTitle>
+
+<h1>Edit Guide</h1>
+
+@if (!string.IsNullOrEmpty(loadError))
+{
+	<div class="alert alert-danger" role="alert">@loadError</div>
+}
+else if (guide is null)
+{
+	<p><em>Loading...</em></p>
+}
+else
+{
+	<EditForm Model="guide" FormName="EditGuideForm" OnValidSubmit="SaveAsync">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+
+		<div class="mb-3">
+			<label for="name" class="form-label">Name</label>
+			<InputText id="name" class="form-control" @bind-Value="guide.Name" />
+		</div>
+
+		<div class="mb-3">
+			<label for="author" class="form-label">Author</label>
+			<InputText id="author" class="form-control" @bind-Value="guide.Author" />
+		</div>
+
+		<div class="mb-3">
+			<label for="season" class="form-label">Season</label>
+			<InputText id="season" class="form-control" @bind-Value="guide.Season" />
+		</div>
+
+		<div class="mb-3">
+			<label for="difficulty" class="form-label">Difficulty</label>
+			<InputText id="difficulty" class="form-control" @bind-Value="guide.Difficulty" />
+		</div>
+
+		@if (!string.IsNullOrEmpty(saveError))
+		{
+			<div class="alert alert-danger" role="alert">@saveError</div>
+		}
+
+		<a class="btn btn-danger" href="@($"/guides/delete/{guide.Id}")">Delete</a>
+		<button type="submit" class="btn btn-primary">Save</button>
+		<a class="btn btn-secondary ms-2" href="/guides">Back to list</a>
+	</EditForm>
+}
+
+@code {
+	[Parameter]
+	public int Id { get; set; }
+
+	private Guide? guide;
+	private string? loadError;
+	private string? saveError;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			await using var context = await ContextFactory.CreateDbContextAsync();
+			guide = await context.GetGuideByIdAsync(Id);
+
+			if (guide is null)
+			{
+				loadError = $"Guide with Id {Id} was not found.";
+			}
+		}
+		catch (Exception ex)
+		{
+			loadError = $"Unable to load guide: {ex.Message}";
+		}
+	}
+
+	private async Task SaveAsync()
+	{
+		if (guide is null)
+		{
+			return;
+		}
+
+		saveError = null;
+
+		try
+		{
+			await using var context = await ContextFactory.CreateDbContextAsync();
+			await context.UpdateGuideAsync(guide);
+			Console.WriteLine($"Guide {guide.Id} saved successfully");
+			Navigation.NavigateTo("/guides");
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Save error: {ex.Message}");
+			saveError = $"Unable to save changes: {ex.Message}";
+		}
+	}
+}

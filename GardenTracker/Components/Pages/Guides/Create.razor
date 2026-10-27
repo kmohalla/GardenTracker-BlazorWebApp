@@ -1,0 +1,65 @@
+﻿@page "/guides/create"
+@rendermode InteractiveServer
+@using GardenData 
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<GardenContext> ContextFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Create Guide</PageTitle>
+
+<h1>Create Guide</h1>
+
+<EditForm Model="guide" FormName="CreateGuideForm" OnValidSubmit="CreateAsync">
+	<DataAnnotationsValidator />
+	<ValidationSummary />
+
+	<div class="mb-3">
+		<label for="name" class="form-label">Name</label>
+		<InputText id="name" class="form-control" @bind-Value="guide.Name" />
+	</div>
+
+	<div class="mb-3">
+		<label for="author" class="form-label">Author</label>
+		<InputText id="author" class="form-control" @bind-Value="guide.Author" />
+	</div>
+
+	<div class="mb-3">
+		<label for="season" class="form-label">Season</label>
+		<InputText id="season" class="form-control" @bind-Value="guide.Season" />
+	</div>
+
+	<div class="mb-3">
+		<label for="difficulty" class="form-label">Difficulty</label>
+		<InputText id="difficulty" class="form-control" @bind-Value="guide.Difficulty" />
+	</div>
+
+	@if (!string.IsNullOrEmpty(saveError))
+	{
+		<div class="alert alert-danger" role="alert">@saveError</div>
+	}
+
+	<button type="submit" class="btn btn-primary">Create</button>
+	<a class="btn btn-secondary ms-2" href="/guides">Back to list</a>
+
+</EditForm>
+
+@code {
+	private readonly Guide guide = new();
+	private string? saveError;
+
+	private async Task CreateAsync()
+	{
+		saveError = null;
+
+		try
+		{
+			await using var context = await ContextFactory.CreateDbContextAsync();
+			await context.CreateGuideAsync(guide);
+			Navigation.NavigateTo("/guides");
+		}
+		catch (Exception ex)
+		{
+			saveError = $"Unable to create guide: {ex.Message}";
+		}
+	}
+}

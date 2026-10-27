@@ -1,0 +1,65 @@
+@page "/tools/create"
+@rendermode InteractiveServer
+@using GardenData
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<GardenContext> ContextFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Create Tool</PageTitle>
+
+<h1>Create Tool</h1>
+
+<EditForm Model="tool" FormName="CreateToolForm" OnValidSubmit="CreateAsync">
+	<DataAnnotationsValidator />
+	<ValidationSummary />
+
+	<div class="mb-3">
+		<label for="type" class="form-label">Type</label>
+		<InputText id="type" class="form-control" @bind-Value="tool.Type" />
+	</div>
+
+	<div class="mb-3">
+		<label for="material" class="form-label">Material</label>
+		<InputText id="material" class="form-control" @bind-Value="tool.Material" />
+	</div>
+
+	<div class="mb-3">
+		<label for="length" class="form-label">Length (cm)</label>
+		<InputNumber id="length" class="form-control" @bind-Value="tool.LengthCm" />
+	</div>
+
+	<div class="mb-3">
+		<label for="weight" class="form-label">Weight (kg)</label>
+		<InputNumber id="weight" class="form-control" @bind-Value="tool.WeightKg" />
+	</div>
+
+	@if (!string.IsNullOrEmpty(saveError))
+	{
+		<div class="alert alert-danger" role="alert">@saveError</div>
+	}
+
+	<button type="submit" class="btn btn-primary">Create</button>
+	<a class="btn btn-secondary ms-2" href="/tools">Back to list</a>
+
+</EditForm>
+
+@code {
+	private readonly Tool tool = new();
+	private string? saveError;
+
+	private async Task CreateAsync()
+	{
+		saveError = null;
+
+		try
+		{
+			await using var context = await ContextFactory.CreateDbContextAsync();
+			await context.CreateToolAsync(tool);
+			Navigation.NavigateTo("/tools");
+		}
+		catch (Exception ex)
+		{
+			saveError = $"Unable to create tool: {ex.Message}";
+		}
+	}
+}
