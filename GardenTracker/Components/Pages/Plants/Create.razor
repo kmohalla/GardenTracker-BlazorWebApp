@@ -1,0 +1,97 @@
+@page "/plants/create"
+@rendermode InteractiveServer
+@using GardenData
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<GardenContext> ContextFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Create Plant</PageTitle>
+
+<h1>Create Plant</h1>
+
+@if (!string.IsNullOrEmpty(loadError))
+{
+	<div class="alert alert-danger" role="alert">@loadError</div>
+}
+else
+{
+	<EditForm Model="plant" FormName="CreatePlantForm" OnValidSubmit="CreateAsync">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+
+		<div class="mb-3">
+			<label for="name" class="form-label">Name</label>
+			<InputText id="name" class="form-control" @bind-Value="plant.Name" />
+		</div>
+
+		<div class="mb-3">
+			<label for="family" class="form-label">Family</label>
+			<InputText id="family" class="form-control" @bind-Value="plant.Family" />
+		</div>
+
+		<div class="mb-3">
+			<label for="type" class="form-label">Type</label>
+			<InputText id="type" class="form-control" @bind-Value="plant.Type" />
+		</div>
+
+		<div class="mb-3">
+			<label for="color" class="form-label">Color</label>
+			<InputText id="color" class="form-control" @bind-Value="plant.Color" />
+		</div>
+
+		<div class="mb-3">
+			<label for="supplier" class="form-label">Supplier</label>
+			<InputSelect id="supplier" class="form-select" @bind-Value="plant.SupplierId">
+				<option value="">--Select Supplier--</option>
+				@foreach (var supplier in suppliers)
+				{
+					<option value="@supplier.Id">@supplier.Name</option>
+				}
+			</InputSelect>
+		</div>
+
+		@if (!string.IsNullOrEmpty(saveError))
+		{
+			<div class="alert alert-danger" role="alert">@saveError</div>
+		}
+
+		<button type="submit" class="btn btn-primary">Create</button>
+		<a class="btn btn-secondary ms-2" href="/plants">Back to list</a>
+	</EditForm>
+}
+
+@code {
+	private readonly Plant plant = new();
+	private List<Supplier> suppliers = new();
+	private string? loadError;
+	private string? saveError;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			await using var context = await ContextFactory.CreateDbContextAsync();
+			suppliers = await context.GetSuppliersForDropdownAsync();
+		}
+		catch (Exception ex)
+		{
+			loadError = $"Unable to load suppliers: {ex.Message}";
+		}
+	}
+
+	private async Task CreateAsync()
+	{
+		saveError = null;
+
+		try
+		{
+			await using var context = await ContextFactory.CreateDbContextAsync();
+			await context.CreatePlantAsync(plant);
+			Navigation.NavigateTo("/plants");
+		}
+		catch (Exception ex)
+		{
+			saveError = $"Unable to create plant: {ex.Message}";
+		}
+	}
+}
