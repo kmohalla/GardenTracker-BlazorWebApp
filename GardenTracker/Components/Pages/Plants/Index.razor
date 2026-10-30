@@ -1,0 +1,140 @@
+@page "/plants"
+@using GardenData
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@rendermode InteractiveServer
+@inject IDbContextFactory<GardenContext> ContextFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Plants</PageTitle>
+
+<h1>Plants</h1>
+
+<a href="/plants/create">Create Plant</a>
+
+<form formname="searchform" action="/plants" data-enhance="" data-permanent="">
+	<input type="search" name="name" placeholder="Name" @bind="name" @bind:event="oninput" />
+	<input type="search" name="family" placeholder="Family" @bind="family" @bind:event="oninput" />
+	<input type="search" name="color" placeholder="Color" @bind="color" @bind:event="oninput" />
+	<button type="submit">Search</button>
+	<button type="button" class="btn btn-secondary ms-2" @onclick="ClearSearch">Clear</button>
+
+</form>
+
+
+@if (!string.IsNullOrEmpty(loadError))
+{
+	<div class="alert alert-danger" role="alert">@loadError</div>
+}
+else if (plants is null)
+{
+	<p><em>Loading...</em></p>
+}
+else if (plants.Count == 0)
+{
+	<p>No plants found.</p>
+}
+else if (results.Count == 0)
+{
+	<p>No plants found for the search criteria.</p>
+}
+else if (results.Count > 0 && (name != null || family !=null || color !=null))
+{
+	<p>Search results:</p>
+	<!--QuickGrid class="table" Items="context.plants"> ...<QuickGrid-->
+	<div>
+		<QuickGrid class="table" Items="results.AsQueryable()">
+			<PropertyColumn Property="plant => plant.Id" />
+			<PropertyColumn Property="plant => plant.Name" />
+			<PropertyColumn Property="plant => plant.Family" />
+			<PropertyColumn Property="plant => plant.Type" />
+			<PropertyColumn Property="plant => plant.Color" />
+			<TemplateColumn Title="Supplier">
+				@if (context.Supplier != null)
+				{
+					@context.Supplier.Name
+				}
+				else
+				{
+					<em>(None)</em>
+				}
+			</TemplateColumn>
+			<TemplateColumn Context="plant">
+				<a href="@($"/plants/edit/{plant.Id}")">Edit</a> |
+				<a href="@($"/plants/delete/{plant.Id}")">Delete</a>
+			</TemplateColumn>
+		</QuickGrid>
+	</div>
+}
+else
+{
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Id</th>
+				<th>Name</th>
+				<th>Family</th>
+				<th>Type</th>
+				<th>Color</th>
+				<th>Supplier</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var item in plants)
+			{
+				<tr>
+					<td>@item.Id</td>
+					<td>@item.Name</td>
+					<td>@item.Family</td>
+					<td>@item.Type</td>
+					<td>@item.Color</td>
+					<td>@item.Supplier?.Name</td>
+					<td>
+						<a href="@($"/plants/edit/{item.Id}")">Edit</a> |
+						<a href="@($"/plants/delete/{item.Id}")">Delete</a>
+					</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+}
+
+@code {
+	private List<Plant>? plants;
+	private string? loadError;
+	//search parameters
+	[SupplyParameterFromQuery]
+	private string? name { get; set; }
+	[SupplyParameterFromQuery]
+	private string? family { get; set; }
+	[SupplyParameterFromQuery]
+	private string? color { get; set; }
+	private List<Plant> results = new();
+	//private IQueryable<Plant> results = Enumerable.Empty<Plant>().AsQueryable();
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			await using var context = await ContextFactory.CreateDbContextAsync();
+			plants = await context.GetAllPlantsAsync();
+		}
+		catch (Exception ex)
+		{
+			loadError = $"Unable to load plants: {ex.Message}";
+		}
+	}
+	protected override async Task OnParametersSetAsync()
+	{
+		using var context = await ContextFactory.CreateDbContextAsync();
+		results = await context.SearchAsync(name, family, color);
+	}
+	private void ClearSearch()
+	{
+		name = null;
+		family = null;
+		color = null;
+		Navigation.NavigateTo("/plants");
+	}
+}
