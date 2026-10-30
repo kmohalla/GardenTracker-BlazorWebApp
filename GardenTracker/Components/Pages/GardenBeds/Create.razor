@@ -1,0 +1,117 @@
+﻿@page "/gardenbeds/create"
+@rendermode InteractiveServer
+@using GardenData
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<GardenContext> ContextFactory
+@inject NavigationManager Navigation
+
+<PageTitle>Create GardenBed</PageTitle>
+
+<h1>Create Garden Bed</h1>
+
+@if (!string.IsNullOrEmpty(loadError))
+{
+	<div class="alert alert-danger" role="alert">@loadError</div>
+}
+else
+{
+	<EditForm Model="gardenBed" FormName="CreateGardenBedForm" OnValidSubmit="CreateAsync">
+		<DataAnnotationsValidator />
+		<ValidationSummary />
+
+		<div class="mb-3">
+			<label for="name" class="form-label">Name</label>
+			<InputText id="name" class="form-control" @bind-Value="gardenBed.Name" />
+		</div>
+
+		<div class="mb-3">
+			<label for="status" class="form-label">Status</label>
+			<InputText id="status" class="form-control" @bind-Value="gardenBed.Status" />
+		</div>
+
+		<div class="mb-3">
+			<label for="plantedDate" class="form-label">Planted Date</label>
+			<InputDate id="plantedDate" class="form-control" Type="InputDateType.Date" @bind-Value="gardenBed.PlantedDate" />
+		</div>
+
+		<div class="mb-3">
+			<label for="guide" class="form-label">Guide</label>
+			<InputSelect id="guide" class="form-select" @bind-Value="gardenBed.GuideId">
+				<option value="">--Select Guide--</option>
+				@foreach (var guide in guides)
+				{
+					<option value="@guide.Id">@guide.Name</option>
+				}
+			</InputSelect>
+		</div>
+		<div class="mb-3">
+			<label for="plant" class="form-label">Plant</label>
+			<InputSelect id="plant" class="form-select" @bind-Value="gardenBed.PlantId">
+				<option value="">--Select Plant--</option>
+				@foreach (var plant in plants)
+				{
+					<option value="@plant.Id">@plant.Name</option>
+				}
+			</InputSelect>
+		</div>
+		<div class="mb-3">
+			<label for="tool" class="form-label">Tool</label>
+			<InputSelect id="tool" class="form-select" @bind-Value="gardenBed.ToolId">
+				<option value="">--Select Tool--</option>
+				@foreach (var tool in tools)
+				{
+					<option value="@tool.Id">@tool.Type</option>
+				}
+			</InputSelect>
+		</div>
+
+		@if (!string.IsNullOrEmpty(saveError))
+		{
+			<div class="alert alert-danger" role="alert">@saveError</div>
+		}
+
+		<button type="submit" class="btn btn-primary">Create</button>
+		<a class="btn btn-secondary ms-2" href="/gardenbeds">Back to list</a>
+	</EditForm>
+}
+
+@code {
+	private readonly GardenBed gardenBed = new() { PlantedDate = DateTime.Today };
+	private List<Guide> guides = new();
+	private List<Plant> plants = new();
+	private List<Tool> tools = new();
+	private string? loadError;
+	private string? saveError;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			await using var context = await ContextFactory.CreateDbContextAsync();
+			guides = await context.GetGuidesForDropdownAsync();
+			plants = await context.GetPlantsForDropdownAsync();
+			tools = await context.GetToolsForDropdownAsync();
+		}
+		catch (Exception ex)
+		{
+			loadError = $"Unable to load dropdown data: {ex.Message}";
+		}
+	}
+
+	private async Task CreateAsync()
+	{
+		saveError = null;
+
+		try
+		{
+			gardenBed.PlantedDate = gardenBed.PlantedDate.Date;
+			await using var context = await ContextFactory.CreateDbContextAsync();
+			await context.CreateGardenBedAsync(gardenBed);
+			Navigation.NavigateTo("/gardenbeds");
+		}
+		catch (Exception ex)
+		{
+			saveError = $"Unable to create garden bed: {ex.Message}";
+		}
+	}
+}

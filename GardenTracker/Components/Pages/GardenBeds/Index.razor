@@ -1,0 +1,74 @@
+﻿@page "/gardenbeds"
+@using GardenData
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<GardenContext> ContextFactory
+
+<PageTitle>Garden Beds</PageTitle>
+
+<h1>Garden Beds</h1>
+
+<a href="/gardenbeds/create">Create Garden Bed</a>
+
+@if (!string.IsNullOrEmpty(loadError))
+{
+	<div class="alert alert-danger" role="alert">@loadError</div>
+}
+else if (gardenBeds is null)
+{
+	<p><em>Loading...</em></p>
+}
+else if (gardenBeds.Count == 0)
+{
+	<p>No garden beds found.</p>
+}
+else
+{
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Id</th>
+				<th>Name</th>
+				<th>Author</th>
+				<th>Season</th>
+				<th>Difficulty</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var item in gardenBeds)
+			{
+				<tr>
+					<td>@item.Id</td>
+					<td>@item.Name</td>
+					<td>@item.Status</td>
+					<td>@item.PlantedDate.ToString("d")</td>
+					<td>@item.Guide?.Name</td>
+					<td>@item.Plant?.Name</td>
+					<td>@item.Tool?.Type</td>
+					<td>
+						<a href="@($"/gardenbeds/edit/{item.Id}")">Edit</a> |
+						<a href="@($"/gardenbeds/delete/{item.Id}")">Delete</a>
+					</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+}
+
+@code {
+	private List<GardenBed>? gardenBeds;
+	private string? loadError;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			await using var context = await ContextFactory.CreateDbContextAsync();
+			gardenBeds = await context.GetAllGardenBedsAsync();
+		}
+		catch (Exception ex)
+		{
+			loadError = $"Unable to load garden beds: {ex.Message}";
+		}
+	}
+}
